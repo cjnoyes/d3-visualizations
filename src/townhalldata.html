@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <title>Twitter Data from Town Hall Debate</title>
+    <script src="d3.v2.min.js"></script>
+    <script src="d3.layout.cloud.js"></script>
+    <style type="text/css">
+    h2 {
+       font-family: arial,verdana;
+       font-size: 18pt;
+       font-weight: bold;
+       color: Darkblue;
+       Line-height: 20pt;
+    }
+    h3 {
+	       font-family: arial,verdana;
+	       font-size: 15pt;
+	       font-weight: bold;
+	       color: Darkblue;
+	       line-height: 18pt;
+    }
+    </style>
+  </head>
+<body>
+
+<center><h2>Twitter Data Word Cloud</h2>
+<h3>Sampled from Twitter during Town Hall debate</h3>
+<p>Data Source: <select id="source" name="source"><option value="wordfreq">Twitter Words Used</option><option value="hashfreq">Twitter Hashtags Used</option><option value="screename">Twitter Screen Names</option><option value="source">Twitter Source</option></select></p>
+<p>Color Scheme: <select id="colorset" name="colorset"><option value="10">10 Colors</option><option value="20">20 Colors Scheme</option><option value="20b">20 Colors Scheme B</option><option value="20c">20 Colors Scheme C</option></select>
+ Font: <select id="font" name="font"><option value="Impact">Impact</option><option value="Arial Black">Arial Black</option><option value="Stencil">Stencil</option><option value="Cooper Black">Cooper Black</option></select>
+</center>
+
+<div id="graphic">
+    <script>
+      function getSource() {
+           var select = d3.select("#source");
+		   var source = select.property("options")[select.property("selectedIndex")].value;
+		   var retval = new Object();
+		   switch (source) {
+		       case "wordfreq":
+		          retval.csv="tweetwordfrequency.csv";
+		          retval.divisor=75;
+		       break;
+		       case "hashfreq":
+		          retval.csv="hashtagfrequency.csv";
+		          retval.divisor=20;
+		       break;
+		       case "screename":
+		          retval.csv="screennamefreq.csv";
+		          retval.divisor=22;
+		       break;
+		       case "source":
+		       default:
+		          retval.csv="twittersource.csv";
+		          retval.divisor=10;
+		       break;
+		   }
+		   return retval;
+      }
+
+
+	  function getfill() {
+	             var select = d3.select("#colorset");
+
+	  		   var scheme = select.property("options")[select.property("selectedIndex")].value;
+
+	  	       var fill = d3.scale.category20();
+
+	           if (scheme=="10") {
+	  		   	   fill = d3.scale.category10();
+	  		   }
+	  		   else if (scheme=="20b") {
+	  		   	   fill = d3.scale.category20b();
+	  		   }
+	  		   else if (scheme=="20c") {
+	  		   	   fill = d3.scale.category20c();
+	  		   }
+	  		   else {
+	  		       fill = d3.scale.category20();
+	  		   }
+	           return fill;
+	        }
+
+
+	        function getfont() {
+	  	       var select = d3.select("#font");
+
+	  	  	   var font = select.property("options")[select.property("selectedIndex")].value;
+
+	             return font;
+	        }
+
+
+      var fill = getfill();
+
+      var source=getSource();
+
+
+	  d3.csv(source.csv, function(csv) {
+			csv.forEach(function(d) { d.value = Math.log(parseInt(d.Count)/source.divisor)/Math.LOG10E; d.Count = + d.Count; });
+			window.csv_data = csv;
+			window.layout = d3.layout.cloud().size([screen.width-50, screen.height-300])
+		   .words(
+			  csv.map(function (d) { return { text: d.Text, size: d.value + 10 };
+			  })
+		   )
+		  .rotate(function() { return ~~(Math.random() * 2) * 90; })
+		  .font(getfont())
+		  .fontSize(function(d) { return d.size * 2; })
+		  .on("end", draw)
+		  .start();
+
+
+	  function draw(words) {
+
+	  d3.select("body").select("div").append("svg")
+	        .attr("width", screen.width-50)
+	        .attr("height", screen.height-300)
+
+	      .append("g")
+	        .attr("transform", "translate(" + ((screen.width-50)/2) + "," + ((screen.height-300)/2) + ")")
+	      .selectAll("text")
+	        .data(words)
+	      .enter().append("text")
+	        .on("click", function(d) { window.csv_data.forEach(function(x) { if (d.text==x.Text) {window.alert(x.Count);} }); })
+	        .style("font-size", function(d) { return d.size + "px"; })
+	        .style("font-family", getfont())
+	        .style("fill", function(d, i) { return fill(i); })
+	        .attr("text-anchor", "middle")
+	        .attr("transform", function(d) {
+	          return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+	        })
+	        .text(function(d) { return d.text; });
+	       }
+		});
+
+
+      d3.selectAll("select").on("change", function(e) {
+	        d3.select("body").select("div").selectAll("svg").remove();
+	        fill = getfill();
+	        var source= getSource();
+	        d3.csv(source.csv, function(csv) {
+				csv.forEach(function(d) { d.value = Math.log(parseInt(d.Count)/source.divisor)/Math.LOG10E; d.Count = + d.Count; });
+				window.csv_data = csv;
+				window.layout.stop().font(getfont()).words(csv.map( function (d) {return { text: d.Text, size: d.value + 10 };} )).start();
+			});
+
+
+       });
+
+</script>
+</div>
+
+</body>
+</html>
